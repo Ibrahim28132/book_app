@@ -73,3 +73,13 @@ class OrderItem(models.Model):
     book = models.ForeignKey(Book, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
+
+class ReadingProgress(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reading_progress')
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='reading_progress')
+    last_page = models.PositiveIntegerField(default=0)
+    percentage_completed = models.FloatField(default=0.0)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['user', 'book']

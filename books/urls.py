@@ -1,12 +1,14 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import *
+from .views import ReadingProgressViewSet
 
 router = DefaultRouter()
 router.register(r'books', BookViewSet)
 router.register(r'authors', AuthorViewSet)
 router.register(r'categories', CategoryViewSet)
 router.register(r'orders', OrderViewSet, basename='order')
+router.register('reading-progress', ReadingProgressViewSet)
 
 
 # Nested reviews
@@ -27,4 +29,5 @@ urlpatterns = [
     path('payment/', PaymentStubView.as_view(), name='payment'),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('recommendations/', RecommendationView.as_view(), name='recommendations'),
 ]

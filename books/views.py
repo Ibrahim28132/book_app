@@ -12,6 +12,12 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes, force_str
 from .serializers import *
 from .models import *
+from django.db.models import Count
+from .models import Book, Wishlist, Order
+from .serializers import RecommendationSerializer
+from rest_framework import viewsets
+from .models import ReadingProgress
+from .serializers import ReadingProgressSerializer
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -58,6 +64,17 @@ class PasswordResetRequestView(APIView):
                 [email]
             )
         return Response({'message': 'If email exists, reset link sent'})
+
+class ReadingProgressViewSet(viewsets.ModelViewSet):
+    queryset = ReadingProgress.objects.all()
+    serializer_class = ReadingProgressSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 class PasswordResetConfirmView(APIView):
     permission_classes = (AllowAny,)
@@ -183,3 +200,21 @@ class PaymentStubView(APIView):
         # In real-world, integrate Stripe here
         # stripe.PaymentIntent.create(amount=..., currency='usd')
         return Response({'message': 'Payment processed (stub)', 'status': 'success'})
+
+
+class RecommendationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        # Get categories from user's wishlist and orders
+        wishlist_categories = Wishlist.objects.filter(user=user).values_list('book__category', flat=True)
+        order_categories = Order.objects.filter(user=user).values_list('items__book__category', flat=True)
+        preferred_categories = set(wishlist_categories).union(order_categories)
+        
+        # Recommend books from preferred categories (exclude already owned)
+        owned_books = Order.objects.filter(user=user).values_list('items__book', flat=True)
+        recommendations = Book.objects.filter(category__in=preferred_categories).exclude(id__in=owned_books)[:5]
+        
+        serializer = RecommendationSerializer(recommendations, many=True)
+        return Response(serializer.data)
