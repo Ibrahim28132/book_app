@@ -84,9 +84,6 @@ class ReviewSerializer(serializers.ModelSerializer):
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
 
-from rest_framework import serializers
-from .models import Book
-
 class RecommendationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Book

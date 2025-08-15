@@ -10,14 +10,12 @@ from django.views.decorators.cache import cache_page
 from django.shortcuts import get_object_or_404
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_decode
+from rest_framework.views import APIView
+from django.db.models import Count
 from .serializers import *
 from .models import *
-from django.db.models import Count
-from .models import Book, Wishlist, Order
-from .serializers import RecommendationSerializer
-from rest_framework import viewsets
-from .models import ReadingProgress
-from .serializers import ReadingProgressSerializer
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -44,9 +42,6 @@ class VerifyEmailView(generics.GenericAPIView):
         return Response({'message': 'Email verified successfully'})
 
 # Password reset: Use DRF's built-in or add custom view
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_decode
-from rest_framework.views import APIView
 
 class PasswordResetRequestView(APIView):
     permission_classes = (AllowAny,)
@@ -208,12 +203,12 @@ class RecommendationView(APIView):
     def get(self, request):
         user = request.user
         # Get categories from user's wishlist and orders
-        wishlist_categories = Wishlist.objects.filter(user=user).values_list('book__category', flat=True)
-        order_categories = Order.objects.filter(user=user).values_list('items__book__category', flat=True)
+        wishlist_categories = Wishlist.objects.filter(user=user).values_list('books__category', flat=True)
+        order_categories = OrderItem.objects.filter(order__user=user).values_list('book__category', flat=True)
         preferred_categories = set(wishlist_categories).union(order_categories)
         
         # Recommend books from preferred categories (exclude already owned)
-        owned_books = Order.objects.filter(user=user).values_list('items__book', flat=True)
+        owned_books = OrderItem.objects.filter(order__user=user).values_list('book', flat=True)
         recommendations = Book.objects.filter(category__in=preferred_categories).exclude(id__in=owned_books)[:5]
         
         serializer = RecommendationSerializer(recommendations, many=True)
